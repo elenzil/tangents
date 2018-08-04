@@ -1,0 +1,3 @@
+[submodule "tangents/Assets/GitSubmodules/oxeUnityUtils"]
+	path = tangents/Assets/GitSubmodules/oxeUnityUtils
+	url = git@github.com:elenzil/oxeUnityUtils.git
