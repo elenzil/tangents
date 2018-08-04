@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class TangentCtlr : MonoBehaviour {
-  #pragma warning disable CS0649
+  #pragma warning disable 0649
   [SerializeField]
   private Transform     thePoint;
   [SerializeField]
@@ -13,7 +13,7 @@ public class TangentCtlr : MonoBehaviour {
   private LineRenderer  lineA;
   [SerializeField]
   private LineRenderer  lineB;
-  #pragma warning restore CS0649
+  #pragma warning restore 0649
   
   void Update() {
   
