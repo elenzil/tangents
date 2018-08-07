@@ -34,7 +34,8 @@ public class TangentCtlr : MonoBehaviour {
     Vector2 tanPosA = Vector2.zero;
     Vector2 tanPosB = Vector2.zero;
     
-    bool foundTangents = tangents((Vector2)theCircle.localPosition, radius, (Vector2)thePoint.localPosition, ref tanPosA, ref tanPosB);
+    bool foundTangents = CircleTangents((Vector2)theCircle.localPosition, radius, (Vector2)thePoint.localPosition, ref tanPosA, ref tanPosB);
+//  bool foundTangents = ParabolaTangents((Vector2)theCircle.localPosition, 0.01f, (Vector2)thePoint.localPosition, ref tanPosA, ref tanPosB);
     
     Vector2 tanExtrapolateA = tanPosA + (tanPosA - (Vector2)thePoint.localPosition);
     Vector2 tanExtrapolateB = tanPosB + (tanPosB - (Vector2)thePoint.localPosition);
@@ -55,18 +56,7 @@ public class TangentCtlr : MonoBehaviour {
     ptB1 .gameObject.SetActive(foundTangents);
   }
   
-  void setPoints(Vector3 center, float radius, float x, Transform p1, Transform p2) {
-    x -= center.x;
-    if (Mathf.Abs(x) > radius) {
-      return;
-    }
-    
-    float absY = Mathf.Sqrt((radius * radius) - (x * x));
-    p1.localPosition = center + new Vector3(x,  absY, 0);
-    p2.localPosition = center + new Vector3(x, -absY, 0);
-  }
-  
-  bool tangents(Vector2 center, float r, Vector2 p, ref Vector2 tanPosA, ref Vector2 tanPosB) {
+  bool CircleTangents(Vector2 center, float r, Vector2 p, ref Vector2 tanPosA, ref Vector2 tanPosB) {
     // subtract off the circle center
     p -= center;
     
@@ -112,6 +102,44 @@ public class TangentCtlr : MonoBehaviour {
     
     tanPosA.y = mulA * Mathf.Sqrt(rr - (x1 * x1));    
     tanPosB.y = mulB * Mathf.Sqrt(rr - (x2 * x2));    
+    
+    // add on the circle center
+    tanPosA += center;
+    tanPosB += center;
+    return true;
+  }
+  
+  bool ParabolaTangents(Vector2 center, float k, Vector2 p, ref Vector2 tanPosA, ref Vector2 tanPosB) {
+    // subtract off the circle center
+    p -= center;
+    
+    // according to my research,
+    // the x-coordinates where tangencies occur are given by a quadratic with:   
+    // a = k
+    // b = -2 * k * Px
+    // c = Py
+    // these values can be derived by any of three approaches:
+    // 3. calculate the slope at the point of tangency based on the derivative of the equation for y(x).
+    
+    float a = k;
+    float b = -2.0f * k * p.x;
+    float c = p.y;
+    
+    float BSquaredMinus4AC = (b * b) - (4f * a * c);
+
+    if (BSquaredMinus4AC < 0f) {
+      // all solutions are imaginary
+      return false;
+    }
+
+    float x1 = (-b + Mathf.Sqrt(BSquaredMinus4AC)) / (2f * a);
+    float x2 = (-b - Mathf.Sqrt(BSquaredMinus4AC)) / (2f * a);
+
+    tanPosA.x = x1;
+    tanPosB.x = x2;
+    
+    tanPosA.y = k * x1 * x1;
+    tanPosB.y = k * x2 * x2;
     
     // add on the circle center
     tanPosA += center;
