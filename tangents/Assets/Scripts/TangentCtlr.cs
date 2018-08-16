@@ -23,6 +23,16 @@ public class TangentCtlr : MonoBehaviour {
   private Transform     ptB1;
   [SerializeField]
   private Transform     ptB2;
+  [SerializeField]
+  private Toggle        togDX0;
+  [SerializeField]
+  private Toggle        togDXR;
+  [SerializeField]
+  private Toggle        togDY0;
+  [SerializeField]
+  private GameObject    goFoundTangents;
+  [SerializeField]
+  private Text          txtBSqM4A;
   #pragma warning restore 0649
   
   void Update() {
@@ -30,12 +40,19 @@ public class TangentCtlr : MonoBehaviour {
     // calculate radius of the circle. assumes sqaure RT
     float radius = theCircle.rect.width / 2.0f;
     
-  
     Vector2 tanPosA = Vector2.zero;
     Vector2 tanPosB = Vector2.zero;
     
-    bool foundTangents = CircleTangents((Vector2)theCircle.localPosition, radius, (Vector2)thePoint.localPosition, ref tanPosA, ref tanPosB);
+    Vector3 tmp = thePoint.localPosition;
+    tmp.x = (togDX0.isOn ? theCircle : thePoint).localPosition.x;
+    tmp.x = (togDXR.isOn ? theCircle.localPosition.x + radius : tmp.x);
+    tmp.y = (togDY0.isOn ? theCircle : thePoint).localPosition.y;
+    thePoint.localPosition = tmp;
+    
+    bool foundTangents = CircleTangents_2((Vector2)theCircle.localPosition, radius, (Vector2)thePoint.localPosition, ref tanPosA, ref tanPosB);
 //  bool foundTangents = ParabolaTangents((Vector2)theCircle.localPosition, 0.01f, (Vector2)thePoint.localPosition, ref tanPosA, ref tanPosB);
+
+    goFoundTangents.SetActive(foundTangents);
     
     Vector2 tanExtrapolateA = tanPosA + (tanPosA - (Vector2)thePoint.localPosition);
     Vector2 tanExtrapolateB = tanPosB + (tanPosB - (Vector2)thePoint.localPosition);
@@ -56,7 +73,36 @@ public class TangentCtlr : MonoBehaviour {
     ptB1 .gameObject.SetActive(foundTangents);
   }
   
-  bool CircleTangents(Vector2 center, float r, Vector2 p, ref Vector2 tanPosA, ref Vector2 tanPosB) {
+  // this approach is more geometrical and less algebraic than approach 1,
+  // and far more stable. thanks to Mike Plotz for suggesting this direction.
+  bool CircleTangents_2(Vector2 center, float r, Vector2 p, ref Vector2 tanPosA, ref Vector2 tanPosB) {
+    p -= center;
+    
+    float P = p.magnitude;
+    
+    // if p is inside the circle, there ain't no tangents.
+    if (P <= r) {
+      return false;
+    }
+        
+    float a = r * r                                          / P;    
+    float q = r * (float)System.Math.Sqrt((P * P) - (r * r)) / P;
+    
+    Vector2 pN  = p / P;
+    Vector2 pNP = new Vector2(-pN.y, pN.x);
+    Vector2 va  = pN * a;
+    
+    tanPosA = va + pNP * q;
+    tanPosB = va - pNP * q;
+
+    tanPosA += center;
+    tanPosB += center;
+    
+    return true;
+  }
+  
+  
+  bool CircleTangents_1(Vector2 center, float r, Vector2 p, ref Vector2 tanPosA, ref Vector2 tanPosB) {
     // subtract off the circle center
     p -= center;
     
@@ -72,36 +118,38 @@ public class TangentCtlr : MonoBehaviour {
     // 2. same as 1, but express perpendicularity with the slopes being inverse reciprocals.
     // 3. calculate the slope at the point of tangency based on the derivative of the equation for y(x).
     
-    float rr = r * r;
-    float pypy = p.y * p.y;
+    double rr = r * r;
+    double pypy = p.y * p.y;
     
-    float a = (p.x * p.x) + (pypy);
-    float b = -2.0f * p.x * rr;
-    float c = rr * (rr - pypy);
+    double a = (p.x * p.x) + (pypy);
+    double b = -2.0f * p.x * rr;
+    double c = rr * (rr - pypy);
     
-    float BSquaredMinus4AC = (b * b) - (4f * a * c);
+    double BSquaredMinus4AC = (b * b) - (4f * a * c);
+    
+    txtBSqM4A.text = BSquaredMinus4AC.ToString("0.00");
 
-    if (BSquaredMinus4AC < 0f) {
+    if (BSquaredMinus4AC <= 0f) {
       // all solutions are imaginary
       return false;
     }
 
-    float x1 = (-b + Mathf.Sqrt(BSquaredMinus4AC)) / (2f * a);
-    float x2 = (-b - Mathf.Sqrt(BSquaredMinus4AC)) / (2f * a);
+    double x1 = (-b + System.Math.Sqrt(BSquaredMinus4AC)) / (2f * a);
+    double x2 = (-b - System.Math.Sqrt(BSquaredMinus4AC)) / (2f * a);
 
-    tanPosA.x = x1;
-    tanPosB.x = x2;
+    tanPosA.x = (float)x1;
+    tanPosB.x = (float)x2;
     
     // decide whether to use the positive or negative solution.
     // just going by the pictures here.
-    float mulA = 1f;
+    double mulA = 1f;
     mulA *= p.y > 0 ? 1f : -1f;
-    float mulB = mulA;
+    double mulB = mulA;
     mulA *= p.x <  r ? 1f : -1f;
     mulB *= p.x > -r ? 1f : -1f;
     
-    tanPosA.y = mulA * Mathf.Sqrt(rr - (x1 * x1));    
-    tanPosB.y = mulB * Mathf.Sqrt(rr - (x2 * x2));    
+    tanPosA.y = (float)(mulA * System.Math.Sqrt(rr - (x1 * x1)));    
+    tanPosB.y = (float)(mulB * System.Math.Sqrt(rr - (x2 * x2)));
     
     // add on the circle center
     tanPosA += center;
@@ -126,7 +174,7 @@ public class TangentCtlr : MonoBehaviour {
     float c = p.y;
     
     float BSquaredMinus4AC = (b * b) - (4f * a * c);
-
+    
     if (BSquaredMinus4AC < 0f) {
       // all solutions are imaginary
       return false;
